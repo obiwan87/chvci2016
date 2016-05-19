@@ -85,7 +85,7 @@ for i=1:numel(sloth.annotations)
         image_resize = imresize(image_orig, nd);
 
         %save image to new path    
-        imwrite(image_resize, s_image_full);    
+        imwrite(image_resize, s_image_full);
     end
     
     for j=1:numel(scaled_sloth.annotations{i}.annotations)
@@ -114,7 +114,17 @@ for i=1:numel(sloth.annotations)
     fprintf(text);
 end
 
-savejson('', scaled_sloth.annotations, fullfile(root_dir_scaled, scaled_sloth.json));
-fprintf('Elapsed time %.2f', toc);
+jsonfilename = fullfile(root_dir_scaled, scaled_sloth.json);
+
+if exist(jsonfilename, 'file')    
+    fprintf('Warning! %s already exists! Original labels-file not overwritten!\n', jsonfilename);
+    jsonfilename = [ fullfile(root_dir_scaled, randomString(10)) '.json'];
+    fprintf('Saving to %s instead...\n', jsonfilename);
 end
+
+savejson('', scaled_sloth.annotations, jsonfilename);
+fprintf('Elapsed time %.2f s \n', toc);
+
+end
+
 
