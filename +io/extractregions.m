@@ -1,4 +1,4 @@
-function [labels] = extractregions ( sloth, regions_dir, varargin)
+function [imagelist] = extractregions ( sloth, regions_dir, varargin)
 %EXTRACTREGIONS Extracts annotated regions.
 %   Extracts annotated regions and stores them in regions_dir. Creates 
 %   a file region-labels.txt that maps the region file to its corresponding
@@ -11,14 +11,17 @@ function [labels] = extractregions ( sloth, regions_dir, varargin)
 %
 %   Options
 %   ---------------------------------------------------------------------
-%   'labelmode'    'folder'
-%                  Puts each file in folder named after its class.
+%   'FileStructure'    'ClassFolders'
+%                       Puts each file in folder named after its class.
 %                   
-%                  'file'
-%                  Mirrors the folder structure of the original files.
+%                      'Mirror' (Default)
+%                       Mirrors the folder structure of the original files.
 %   
-%   'readfcn'      Function handle for image preprocessing. You can use
-%                  this to e.g. resize for Alex-Net. 
+%   'ReadFcn'          Function handle for image preprocessing. You can use
+%                      this to e.g. resize for Alex-Net. 
+%   
+%   'Labeled'          Boolean value that indicates if the dataset is 
+%                      labeled (Default: True)
 %  
 %   Output
 %   ---------------------------------------------------------------------
@@ -33,20 +36,26 @@ function [labels] = extractregions ( sloth, regions_dir, varargin)
 %  %to use them in Alex-Net.%Places the regions in subfolders 
 %  %<class>/<region-image>. 
 %
-%  labels = io.extractregions(sloth, 'regions/', 'labelmode', 'folder', ... 
-%                 'readfcn', @(x) imresize(x, [227 227]));
+%  labels = io.extractregions(sloth, 'regions/', ...
+%                     'FileStructure', 'ClassFolders', ...
+%                     'ReadFcn', @(x) imresize(x, [227 227]));
 %
 
 opts = parse_inputs(varargin{:});
 
 root_dir_path = sloth.path;
-readfcn = opts.readfcn;
+
+if(~opts.Labeled)
+    opts.FileStructure = 'Mirror';
+end
+
+readfcn = opts.ReadFcn;
 
 if ~exist(regions_dir, 'dir') 
     mkdir(regions_dir)
 end
 
-labels = {};
+imagelist = {};
 
 k = 1;
 for i=1:numel(sloth.annotations)
@@ -54,23 +63,27 @@ for i=1:numel(sloth.annotations)
     image = imread(fullfile(root_dir_path, a.filename));
     [pathstr, name, ext] = fileparts(a.filename);
     
-    if ~strcmp(opts.labelmode, 'folder')
+    if ~strcmp(opts.FileStructure, 'ClassFolders')
         if ~exist( fullfile(regions_dir, pathstr) , 'dir')
             mkdir(fullfile(regions_dir, pathstr));
         end
     end
     
     for j=1:numel(a.annotations)
-        label = a.annotations{j};
-        rect = [label.x label.y label.width label.height];
-        label_class = label.class;
+        b = a.annotations{j};
+        rect = [b.x b.y b.width b.height];
+        
                 
         region_image = imcrop(image, rect);
         region_filename = sprintf('%s-%03d%s', name, j, ext);
         
         region_filepath = fullfile(regions_dir);
-
-        if strcmp(opts.labelmode, 'folder')
+        
+        if opts.Labeled
+            label_class = b.class; 
+        end
+        
+        if strcmp(opts.FileStructure, 'ClassFolders')            
             region_filepath = fullfile(region_filepath, label_class);
             if ~exist(region_filepath, 'dir') 
                 mkdir(region_filepath)
@@ -84,8 +97,10 @@ for i=1:numel(sloth.annotations)
             imwrite(region_image, region_filepath);            
         end  
         
-        labels{k,1} = region_filepath;
-        labels{k,2} = label_class;
+        imagelist{k,1} = region_filepath;
+        if opts.Labeled
+            imagelist{k,2} = label_class;
+        end
         
         k = k + 1;
     end    
@@ -99,12 +114,16 @@ else
     fileID = fopen(labelfile, 'a');
 end
 
-formatSpec = '%s %s\n';
+if opts.Labeled
+    formatSpec = '%s %s\n';
+else 
+    formatSpec = '%s \n';
+end
 
-[nrows, ~] = size(labels);
+[nrows, ~] = size(imagelist);
 
 for row = 1:nrows
-    fprintf(fileID, formatSpec, labels{row,:});
+    fprintf(fileID, formatSpec, imagelist{row,:});
 end
 
 fclose(fileID);
@@ -116,11 +135,13 @@ function [opts] = parse_inputs(varargin)
     input_data.CaseSensitive = false;
     input_data.StructExpand = true;
     
-    input_data.addOptional('labelmode', 'file', @(x) strcmpi(x, 'file') || strcmpi(x, 'folder'));
-    input_data.addOptional('readfcn', @(x) x, @(x) isa(x, 'function_handle'));
+    input_data.addOptional('Labeled', true);
+    input_data.addOptional('FileStructure', 'Mirror', @(x) strcmpi(x, 'Mirror') || strcmpi(x, 'ClassFolders'));
+    input_data.addOptional('ReadFcn', @(x) x, @(x) isa(x, 'function_handle'));
     
     parse(input_data, varargin{:});
     
-    opts.labelmode = input_data.Results.labelmode;
-    opts.readfcn = input_data.Results.readfcn;
+    opts.Labeled = input_data.Results.Labeled;
+    opts.FileStructure = input_data.Results.FileStructure;
+    opts.ReadFcn = input_data.Results.ReadFcn;
 end
