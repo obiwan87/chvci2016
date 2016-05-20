@@ -6,7 +6,7 @@ function [labels] = extractregions ( sloth, regions_dir, varargin)
 %
 %   Parameters
 %   ---------------------------------------------------------------------
-%   sloth          Sloth config (see readsloth())
+%   sloth          Sloth labels (see readsloth())
 %   regions_dir    Root directory of region files
 %
 %   Options
@@ -16,11 +16,26 @@ function [labels] = extractregions ( sloth, regions_dir, varargin)
 %                   
 %                  'file'
 %                  Mirrors the folder structure of the original files.
-%                  
+%   
+%   'readfcn'      Function handle for image preprocessing. You can use
+%                  this to e.g. resize for Alex-Net. 
 %  
+%   Output
+%   ---------------------------------------------------------------------
+%   labels         Cell array that contains mapping from extracted image 
+%                  region file to its class label
 %
-
-
+%  Usage Example:
+%  ----------------------------------------------------------------------
+%
+%  %Reads images indicated in parsed sloth file and saves extracted regions
+%  %to image files in 'regions/' subfolder. Resizes each region to 227x227 
+%  %to use them in Alex-Net.%Places the regions in subfolders 
+%  %<class>/<region-image>. 
+%
+%  labels = io.extractregions(sloth, 'regions/', 'labelmode', 'folder', ... 
+%                 'readfcn', @(x) imresize(x, [227 227]));
+%
 
 opts = parse_inputs(varargin{:});
 
