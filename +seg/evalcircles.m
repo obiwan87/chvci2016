@@ -1,4 +1,4 @@
-function [ stats ] = evalcircles( sloth, varargin )
+function [ stats ] = evalcircles( sloth, parameters, varargin )
 %EVALCIRCLES Applies segmentation and evaluates performance
 %
 %   Iterates over all annotated images listed in the given sloth file,
@@ -9,11 +9,6 @@ function [ stats ] = evalcircles( sloth, varargin )
 %   stats = {Filename, #Assumed, #Coins(Reference), #Found, Precision,
 %   Recall}
 % Options:
-%   'MinRadius'         Minimum radius to look for
-%   'MaxRadius'         Maximum radius to look for
-%   'Steps'             Array with step sizes to use for radius range
-%   'ObjectPolarity'    Variable for imfindcircles (default: bright)
-%   'Sensitivity'       Variable for imfindcircles (default: 0.95)
 %   'RequiredOverlap'   Percentage of rectangle overlap required for 
 %                       evaluation to count as correctly found
 
@@ -30,11 +25,16 @@ for i = 1:numel(sloth.annotations)
     % open file, find circles, get boxes
     a = sloth.annotations{i};
     stats{i, 1} = a.filename;
-    I = imread(fullfile(sloth.path, a.filename));
-    [centers, radii] = seg.getcircles(I, 'MinRadius', opts.MinRadius, ...
-        'MaxRadius', opts.MaxRadius, 'Steps', opts.Steps, ...
-        'ObjectPolarity', opts.ObjectPolarity, 'Sensitivity', ...
-        opts.Sensitivity);
+    filename = fullfile(sloth.path, a.filename);
+    
+    %Find circles for this image, for different variation of parameters
+    results = seg.findcircles({filename}, parameters);
+    
+    %Gather results
+    centers = func.foldl({results(1).results.centers}, [], @(x,y) [x y'])';
+    radii = func.foldl({results(1).results.radii}, [], @(x,y) [x y'])';
+    [centers, radii] = seg.removeCirclesInCircles(centers, radii);
+    
     boxes = seg.circlestoboxes(centers, radii);
     
     % keep track of which coins were found
@@ -90,20 +90,9 @@ function [opts] = parse_inputs(varargin)
     input_data.CaseSensitive = false;
     input_data.StructExpand = true;
     
-    input_data.addOptional('MinRadius', 10);
-    input_data.addOptional('MaxRadius', 80);
-    input_data.addOptional('Steps', [10 15]);
-    input_data.addOptional('ObjectPolarity', 'bright');
-    input_data.addOptional('Sensitivity', 0.95);
     input_data.addOptional('RequiredOverlap', 0.9);
-
-    parse(input_data, varargin{:});
+    parse(input_data, varargin{:});    
     
-    opts.MinRadius = input_data.Results.MinRadius;
-    opts.MaxRadius = input_data.Results.MaxRadius;
-    opts.Steps = input_data.Results.Steps;
-    opts.ObjectPolarity = input_data.Results.ObjectPolarity;
-    opts.Sensitivity = input_data.Results.Sensitivity;
     opts.RequiredOverlap = input_data.Results.RequiredOverlap;
 
 end
