@@ -1,4 +1,4 @@
-function [ stats ] = evalcircles( sloth, requiredOverlap )
+function [ stats ] = evalcircles( sloth, varargin )
 %EVALCIRCLES Applies segmentation and evaluates performance
 %
 %   Iterates over all annotated images listed in the given sloth file,
@@ -8,6 +8,17 @@ function [ stats ] = evalcircles( sloth, requiredOverlap )
 %   Statistics are output in the stats cell using the following format: 
 %   stats = {Filename, #Assumed, #Coins(Reference), #Found, Precision,
 %   Recall}
+% Options:
+%   'MinRadius'         Minimum radius to look for
+%   'MaxRadius'         Maximum radius to look for
+%   'Steps'             Array with step sizes to use for radius range
+%   'ObjectPolarity'    Variable for imfindcircles (default: bright)
+%   'Sensitivity'       Variable for imfindcircles (default: 0.95)
+%   'RequiredOverlap'   Percentage of rectangle overlap required for 
+%                       evaluation to count as correctly found
+
+
+opts = parse_inputs(varargin{:});
 
 totalAssumed = 0;
 totalCoins = 0;
@@ -15,12 +26,15 @@ totalFound = 0;
 stats = cell(2,6);
 
 
-for i = 1:2%numel(sloth.annotations)
+for i = 1:numel(sloth.annotations)
     % open file, find circles, get boxes
     a = sloth.annotations{i};
     stats{i, 1} = a.filename;
     I = imread(fullfile(sloth.path, a.filename));
-    [centers, radii] = getcircles(I);
+    [centers, radii] = getcircles(I, 'MinRadius', opts.MinRadius, ...
+        'MaxRadius', opts.MaxRadius, 'Steps', opts.Steps, ...
+        'ObjectPolarity', opts.ObjectPolarity, 'Sensitivity', ...
+        opts.Sensitivity);
     boxes = circlestoboxes(centers, radii);
     
     % keep track of which coins were found
@@ -43,7 +57,7 @@ for i = 1:2%numel(sloth.annotations)
                 bestMatch = k;
             end
         end
-        if maxOverlap > requiredOverlap
+        if maxOverlap > opts.RequiredOverlap
             foundcoins(k) = 1;
             found = found + 1;
         end
@@ -70,3 +84,26 @@ end
 
 end
 
+
+function [opts] = parse_inputs(varargin) 
+    input_data = inputParser;
+    input_data.CaseSensitive = false;
+    input_data.StructExpand = true;
+    
+    input_data.addOptional('MinRadius', 10);
+    input_data.addOptional('MaxRadius', 80);
+    input_data.addOptional('Steps', [10 15]);
+    input_data.addOptional('ObjectPolarity', 'bright');
+    input_data.addOptional('Sensitivity', 0.95);
+    input_data.addOptional('RequiredOverlap', 0.9);
+
+    parse(input_data, varargin{:});
+    
+    opts.MinRadius = input_data.Results.MinRadius;
+    opts.MaxRadius = input_data.Results.MaxRadius;
+    opts.Steps = input_data.Results.Steps;
+    opts.ObjectPolarity = input_data.Results.ObjectPolarity;
+    opts.Sensitivity = input_data.Results.Sensitivity;
+    opts.RequiredOverlap = input_data.Results.RequiredOverlap;
+
+end
