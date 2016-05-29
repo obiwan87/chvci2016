@@ -61,6 +61,7 @@ k = 1;
 for i=1:numel(sloth.annotations)
     a = sloth.annotations{i};
     image = imread(fullfile(root_dir_path, a.filename));
+    
     [pathstr, name, ext] = fileparts(a.filename);
     
     if ~strcmp(opts.FileStructure, 'ClassFolders')
@@ -80,7 +81,7 @@ for i=1:numel(sloth.annotations)
         region_filepath = fullfile(regions_dir);
         
         if opts.Labeled
-            label_class = b.class; 
+            label_class = char(b.class); 
         end
         
         if strcmp(opts.FileStructure, 'ClassFolders')            

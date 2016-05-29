@@ -1,4 +1,9 @@
-function [ centers, radii ] = removeCirclesInCircles( centers, radii )
+function [ centers, radii ] = removeCirclesInCircles( centers, radii, tolerance )
+
+if nargin < 3
+    tolerance = 1.1;
+end
+
 circles = cat(2, centers, radii);
 sc = sortrows(circles, 3);
 
@@ -11,7 +16,7 @@ while i < size(sc, 1) && j <= size(sc, 1)
         % if circle at i is inside circle at j, set radius to 0 
         distance = sqrt((sc(i, 1) - sc(j, 1))^2 + (sc(i, 2) - sc(j, 2))^2);
         % add 10% tolerance to catch circles "almost" inside each other
-        if  distance + sc(i, 3) < 1.1 * sc(j, 3)
+        if  distance + sc(i, 3) < tolerance * sc(j, 3)
             sc(i, 3) = 0;
             i = i + 1;
             j = i + 1;
