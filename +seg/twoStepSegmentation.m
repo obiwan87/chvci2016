@@ -1,4 +1,4 @@
-function [ stats, detection_results ] = twoStepSegmentation( sloth, convnet, classifier, parameters, threshold, varargin)
+function [ stats, detection_results, precision, recall ] = twoStepSegmentation( sloth, convnet, classifier, parameters, threshold, varargin)
 %TWOSTEPSEGMENTATION Summary of this function goes here
 %   Detailed explanation goes here
 %EVALCIRCLES Applies segmentation and evaluates performance
@@ -91,8 +91,11 @@ for i = 1:numel(sloth.annotations)
     detection_results.annotations{i} = regions;
 end
 
-    disp(strcat('Total precision: ', num2str(totalFound / totalAssumed)));
-    disp(strcat('Total recall: ', num2str(totalFound / totalCoins)));
+    precision = totalFound / totalAssumed;
+    recall = totalFound / totalCoins;
+
+    disp(strcat('Total precision: ', num2str(precision)));
+    disp(strcat('Total recall: ', num2str(recall)));
 
 end
 
