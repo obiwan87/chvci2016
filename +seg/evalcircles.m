@@ -34,7 +34,7 @@ for i = 1:numel(sloth.annotations)
     filename = fullfile(sloth.path, a.filename);
     
     %Find circles for this image, for different variation of parameters
-    results = seg.findcircles({filename}, parameters);
+    results = seg.findcircles(filename, parameters);
     
     %Gather results
     centers = func.foldl({results(1).results.centers}, [], @(x,y) [x y'])';
