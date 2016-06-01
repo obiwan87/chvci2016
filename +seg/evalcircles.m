@@ -1,4 +1,6 @@
-function [ stats, detection_results] = evalcircles( sloth, parameters, varargin )
+function [ stats, detection_results ] = evalcircles( sloth, convnet, classifier, parameters, threshold, varargin)
+%TWOSTEPSEGMENTATION Summary of this function goes here
+%   Detailed explanation goes here
 %EVALCIRCLES Applies segmentation and evaluates performance
 %
 %   Iterates over all annotated images listed in the given sloth file,
@@ -11,8 +13,6 @@ function [ stats, detection_results] = evalcircles( sloth, parameters, varargin 
 % Options:
 %   'RequiredOverlap'   Percentage of rectangle overlap required for 
 %                       evaluation to count as correctly found
-%   'CircleMergeTolerance' 
-%   'MergeCircles'
 
 
 opts = parse_inputs(varargin{:});
@@ -20,89 +20,92 @@ opts = parse_inputs(varargin{:});
 totalAssumed = 0;
 totalCoins = 0;
 totalFound = 0;
-stats = cell(2,6);
+stats = cell(numel(sloth.annotations), 6);
 
 %Save hits and non-hits
-detection_results = struct();
-detection_results.path = sloth.path;
-detection_results.annotations = {cell(numel(sloth.annotations,1))};
+detection_results = repmat(struct('path', '', 'annotations', {}), numel(opts.RequiredOverlap), 1);
+for m=1:numel(opts.RequiredOverlap) 
+    dr = struct();
+    dr.path = sloth.path;
+    dr.annotations = {cell(numel(sloth.annotations,1))};
+    detection_results(m) = dr;
+end
 
 for i = 1:numel(sloth.annotations)
     % open file, find circles, get boxes
-    a = sloth.annotations{i};
-    stats{i, 1} = a.filename;
+    a = sloth.annotations{i}; 
+    
     filename = fullfile(sloth.path, a.filename);
+    image = imread(filename);
     
     %Find circles for this image, for different variation of parameters
-    results = seg.findcircles(filename, parameters);
-    
-    %Gather results
-    centers = func.foldl({results(1).results.centers}, [], @(x,y) [x y'])';
-    radii = func.foldl({results(1).results.radii}, [], @(x,y) [x y'])';
-    
-    if opts.MergeCircles
-        [centers, radii] = seg.removeCirclesInCircles(centers, radii, opts.CircleMergeTolerance);
+    if strcmp(opts.Method, 'TwoStep')
+        [centers, radii] = seg.findcoins(image, convnet, classifier, parameters, threshold);
+    else
+        [centers, radii] = seg.findcircles(image, parameters);
     end
-    
+       
     boxes = seg.circlestoboxes(centers, radii);
     
     % keep track of which coins were found
     foundcoins = zeros(numel(a.annotations), 1);
-    found = 0;
-    
+        
     %save results for this image here
-    regions = seg.generateStruct(boxes, a.filename);
-    matches = java.util.HashSet;
+    
+    
     % iterate over suspected matches
-    for j = 1:size(boxes, 1);
-        maxOverlap = 0;
-        bestMatch = 0;
-        % check all labels for match
-        for k = 1:numel(a.annotations)
-            label = a.annotations{k};
-            % determine overlap to find best matching bounding box
-            overlap = seg.determineOverlap2(label.x, label.y, label.width, ...
-                label.height, boxes(j, 1), boxes(j, 2), boxes(j, 3), ...
-                boxes(j, 3));
-            if overlap > maxOverlap
-                maxOverlap = overlap;
-                bestMatch = k;
+    for m=1:numel(opts.RequiredOverlap)
+        requiredOverlap = opts.RequiredOverlap(m);
+        found = 0;
+        assumed = 0;
+        matches = java.util.HashSet;
+        regions = seg.generateStruct(boxes, a.filename);
+        
+        for j = 1:size(boxes, 1);
+            maxOverlap = 0;
+            bestMatch = 0;
+            % check all labels for match
+            for k = 1:numel(a.annotations)
+                label = a.annotations{k};
+                % determine overlap to find best matching bounding box
+                overlap = seg.determineOverlap2(label.x, label.y, label.width, ...
+                    label.height, boxes(j, 1), boxes(j, 2), boxes(j, 3), ...
+                    boxes(j, 3));
+                if overlap > maxOverlap
+                    maxOverlap = overlap;
+                    bestMatch = k;
+                end
             end
-        end
-        regions.annotations{j}.class = 'no-coin';
-
-        if maxOverlap > opts.RequiredOverlap
-            if ~matches.contains(bestMatch)
-                foundcoins(bestMatch) = 1;
-                found = found + 1;
-            end
-            regions.annotations{j}.class = 'coin';
-        else 
             regions.annotations{j}.class = 'no-coin';
+            assumed = assumed + 1;
+            if maxOverlap > requiredOverlap            
+                regions.annotations{j}.class = 'coin';
+                if ~matches.contains(bestMatch) && bestMatch > 0
+                    foundcoins(bestMatch) = 1;
+                    found = found + 1;
+                end
+                matches.add(bestMatch);
+            end
         end
+        
 
-        matches.add(bestMatch);
-      
+        % update detailed stats
+        stats{i, m, 1} = a.filename;
+        stats{i, m, 2} = assumed;
+        stats{i, m, 3} = numel(a.annotations);
+        stats{i, m, 4} = found;
+        stats{i, m, 5} = found / assumed; % precision
+        stats{i, m, 6} = found / numel(a.annotations); % recall
+
+
+        % update global stats
+        totalAssumed = totalAssumed + assumed;
+        totalCoins = totalCoins + numel(a.annotations);
+        totalFound = totalFound + found;
+
+        detection_results(m).annotations{i} = regions;    
     end
-    
-    % update detailed stats
-    stats{i, 2} = size(boxes, 1);
-    stats{i, 3} = numel(a.annotations);
-    stats{i, 4} = found;
-    stats{i, 5} = found / size(boxes, 1); % precision
-    stats{i, 6} = found / numel(a.annotations); % recall
-    
-    
-    % update global stats
-    totalAssumed = totalAssumed + size(boxes, 1);
-    totalCoins = totalCoins + numel(a.annotations);
-    totalFound = totalFound + found;
-    
-    detection_results.annotations{i} = regions;
 end
-
-    disp(strcat('Total precision: ', num2str(totalFound / totalAssumed)));
-    disp(strcat('Total recall: ', num2str(totalFound / totalCoins)));
 
 end
 
@@ -114,11 +117,13 @@ function [opts] = parse_inputs(varargin)
     
     input_data.addOptional('RequiredOverlap', 0.9);
     input_data.addOptional('CircleMergeTolerance', 1.1);
-    input_data.addOptional('MergeCircles', true);
+    input_data.addOptional('Method', 'TwoStep');
+    
     parse(input_data, varargin{:});    
     
     opts.RequiredOverlap = input_data.Results.RequiredOverlap;
     opts.CircleMergeTolerance = input_data.Results.CircleMergeTolerance;
-    opts.MergeCircles = input_data.Results.MergeCircles;
+    opts.Method = input_data.Results.Method;
 
 end
+
