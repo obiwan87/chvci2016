@@ -1,28 +1,33 @@
 %% Data
-%sloth = io.readsloth('~/Desktop/coins/401/labels.json');
-%data = io.extractregions(sloth, '~/Desktop/coins/regions', 'ReadFcn' , @(x) imresize(x, [320 320]));
+path = '~/Desktop/coins/regions';
+sloth = io.readsloth('~/Desktop/coins/401/labels.json');
 
-
+display('Extracting regions');
+tic
+io.extractregions(sloth, path, 'FileStructure', 'ClassFolders', ...
+    'ReadFcn' , @(x) imresize(x, [320 320]));
+imds = imageDatastore(path, 'IncludeSubfolders', true, 'LabelSource', 'foldernames');
+toc
 %% Training
 
-k = 400;
-imageCount = numel(data(:,1));
+k = 500;
+imageCount = length(imds.Files);
 descriptors = {imageCount};
 descriptorsPerImage = zeros(imageCount, 1);
-labels = {imageCount};
 
 % Get SIFT descriptors from all images
+display('Obtain SIFT descriptors');
 tic
 for i = 1:imageCount
-    I = single(rgb2gray(imread(data{i})));
+    I = single(rgb2gray(readimage(imds, i)));
     [f, d] = vl_sift(I);
     descriptors{i} = d;
     descriptorsPerImage(i) = size(d, 2);
-    labels{i} = data{i, 2};
 end
 D = horzcat(descriptors{1:imageCount});
 toc
 
+display('K-Means');
 % Use k-means to cluster descriptors
 tic
 [c, a] = vl_kmeans(single(D), k, 'Initialization', 'plusplus');
@@ -44,4 +49,4 @@ features = sign(features);
 
 
 % SVM
-%classifier = fitcecoc(features, labels);
+%classifier = fitcecoc(features, imds.Labels);
