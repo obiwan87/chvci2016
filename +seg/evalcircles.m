@@ -1,4 +1,4 @@
-function [ stats, detection_results ] = evalcircles( sloth, convnet, classifier, parameters, threshold, varargin)
+function [ stats, detection_results ] = evalcircles( sloth, parameters, classifier, threshold, varargin)
 %TWOSTEPSEGMENTATION Summary of this function goes here
 %   Detailed explanation goes here
 %EVALCIRCLES Applies segmentation and evaluates performance
@@ -32,6 +32,7 @@ for m=1:numel(opts.RequiredOverlap)
 end
 
 for i = 1:numel(sloth.annotations)
+    fprintf('Image %d / %d \n', i, numel(sloth.annotations));
     % open file, find circles, get boxes
     a = sloth.annotations{i}; 
     
@@ -39,20 +40,20 @@ for i = 1:numel(sloth.annotations)
     image = imread(filename);
     
     %Find circles for this image, for different variation of parameters
+    tic
+    disp('Find Coins...');
     if strcmp(opts.Method, 'TwoStep')
-        [centers, radii] = seg.findcoins(image, convnet, classifier, parameters, threshold);
+        [centers, radii] = seg.findcoins(image, classifier, parameters, threshold);
     else
         [centers, radii] = seg.findcircles(image, parameters);
     end
-       
+    toc
+    
     boxes = seg.circlestoboxes(centers, radii);
     
     % keep track of which coins were found
     foundcoins = zeros(numel(a.annotations), 1);
-        
-    %save results for this image here
-    
-    
+
     % iterate over suspected matches
     for m=1:numel(opts.RequiredOverlap)
         requiredOverlap = opts.RequiredOverlap(m);
@@ -116,7 +117,7 @@ function [opts] = parse_inputs(varargin)
     input_data.StructExpand = true;
     
     input_data.addOptional('RequiredOverlap', 0.9);
-    input_data.addOptional('CircleMergeTolerance', 1.1);
+    input_data.addOptional('CircleMergeTolerance', 1.1);    
     input_data.addOptional('Method', 'TwoStep');
     
     parse(input_data, varargin{:});    

@@ -3,13 +3,13 @@ function [classifier] = traincoinclassifier(sloth, path, convnet, parameters, ov
 display('Circle Detection: ');
 tic
 [~, detection_results] = seg.evalcircles(sloth, parameters, ...
-            'RequiredOverlap', overlap, 'MergeCircles', false);
+            'RequiredOverlap', overlap, 'MergeCircles', false, 'Method', 'Naive');
 toc
 
 display('Region Extraction: ');
 tic
 io.extractregions(detection_results, path, ... 
-    'FileStructure', 'ClassFolders', 'ReadFcn', @(x) imresize(x, [227 227]));
+    'FileStructure', 'ClassFolders', 'ReadFcn', @(x) imresize(x, [50 50]));
 toc
 
 display('Feature Extraction: ');
