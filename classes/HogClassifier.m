@@ -17,8 +17,9 @@ classdef HogClassifier < CoinClassifier
             obj.ImageSize = imagesize;
         end
         function predictedLabels = predict(obj, images)
-            %hog
-            features = zeros(size(images,4),size(obj.Classifier.X,2));
+            %hog            
+            hog = extractHOGFeatures(images(:,:,:,1));
+            features = zeros(size(images,4), size(hog,2));
             for i=1:size(images,4)
                 hog = extractHOGFeatures(images(:,:,:,i));
                 features(i,:) = hog;

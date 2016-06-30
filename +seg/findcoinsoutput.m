@@ -1,4 +1,4 @@
-function [out1, out2, out3, out4, out5] = findcoinsoutput( filename, hogClassifier, parameters, overlapThreshold, mergeCirclesThreshold)
+function [out1, out2, out3, out4, out5] = findcoinsoutput( filename, hogClassifier, parameters, mergeCirclesThreshold)
 %FINDCOINSOUTPUT Summary of this function goes here
 %   Detailed explanation goes here
 if ischar(filename)
@@ -6,7 +6,7 @@ if ischar(filename)
 else
     frame = filename;
 end
-[centers, radii, c0, r0, c1, r1, c2, r2] = seg.findcoins(frame, hogClassifier, parameters, overlapThreshold, mergeCirclesThreshold);
+[centers, radii, c0, r0, c1, r1, c2, r2] = seg.findcoins(frame, hogClassifier, parameters, mergeCirclesThreshold);
 heatmapframe = zeros(size(frame,1),size(frame,2));
 boxes = seg.circlestoboxes(c1,r1);
 for i=1:numel(r1)

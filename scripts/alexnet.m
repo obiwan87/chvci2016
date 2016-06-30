@@ -34,9 +34,9 @@ predictedLabels = predict(classifier, testFeatures);
 testLabels = testSet.Labels;
 
 % Tabulate the results using a confusion matrix.
-confMat = confusionmat(testLabels, predictedLabels);
+[confMat, order] = confusionmat(testLabels, predictedLabels);
 
 % Convert confusion matrix into percentage form
-confMat = bsxfun(@rdivide,confMat,sum(confMat,2))
-labels = {'1c', '10c', '1€', '2c', '20c', '2€', '5c', '50c'};
-heatmap(confMat, labels, labels, 1,'Colormap','red','ShowAllTicks',1,'UseLogColorMap',true,'Colorbar',true);
+confMat = bsxfun(@rdivide,confMat,sum(confMat,2));
+
+heatmap(confMat, char(order), char(order), 1,'Colormap','red','ShowAllTicks',1,'UseLogColorMap',true,'Colorbar',true);
