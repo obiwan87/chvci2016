@@ -18,9 +18,11 @@ coinSizes = containers.Map(k,v);
 possibleClasses = {length(metals)};
 
 for i = 1:length(metals)
-    if (strcmp(metals(i), 'Copper'))
+    %if (strcmp(metals(i), 'copper'))
+    if (metals(i) == 'copper')
         possibleClasses{i} = [1 2 5];
-    elseif (strcmp(metals(i), 'Brass'))
+    %elseif (strcmp(metals(i), 'brass'))
+    elseif (metals(i) == 'brass')
         possibleClasses{i} = [10 20 50];
     else
         possibleClasses{i} = [100 200];
