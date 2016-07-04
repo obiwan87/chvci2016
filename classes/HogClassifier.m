@@ -3,21 +3,24 @@ classdef HogClassifier < CoinClassifier
     %   Detailed explanation goes here
     
     properties
-        Classifier = [];   
+        Classifier = [];
         ImageSize = [];
         Convnet = [];
         AlexNetSvm = [];
+        UseAlexNet = true;
     end
     
     methods(Access=public)
-        function obj=HogClassifier(classifier, convnet, alexnetsvm, imagesize)
+        function obj=HogClassifier(classifier, convnet, alexnetsvm, imagesize, useAlexNet)
             obj.Classifier = classifier;
             obj.Convnet = convnet;
             obj.AlexNetSvm = alexnetsvm;
             obj.ImageSize = imagesize;
+            obj.UseAlexNet = useAlexNet;
         end
+        
         function predictedLabels = predict(obj, images)
-            %hog            
+            %hog
             hog = extractHOGFeatures(images(:,:,:,1));
             features = zeros(size(images,4), size(hog,2));
             for i=1:size(images,4)
@@ -27,22 +30,24 @@ classdef HogClassifier < CoinClassifier
             
             [predictedLabels, ~, pbscores] = predict(obj.Classifier, features);
             
-            %Alex net
-            coinscores = abs(pbscores(obj.Classifier.ClassNames(1) == predictedLabels));
-            idx = find(obj.Classifier.ClassNames(1) == predictedLabels);           
-            ii = idx(coinscores<1.5);
-            alexnetimages = images(:,:,:,ii);
-            if numel(alexnetimages) > 0 
-                imgs = zeros(227,227,3,numel(ii));                
-                for i=1:numel(ii)
-                    imgs(:,:,:,i) = imresize(alexnetimages(:,:,:,i),[227 227]);
+            if obj.UseAlexNet
+                %Alex net
+                coinscores = abs(pbscores(obj.Classifier.ClassNames(1) == predictedLabels));
+                idx = find(obj.Classifier.ClassNames(1) == predictedLabels);
+                ii = idx(coinscores<1.5);
+                alexnetimages = images(:,:,:,ii);
+                if numel(alexnetimages) > 0
+                    imgs = zeros(227,227,3,numel(ii));
+                    for i=1:numel(ii)
+                        imgs(:,:,:,i) = imresize(alexnetimages(:,:,:,i),[227 227]);
+                    end
+                    
+                    featureLayer = 'fc7';
+                    features = activations(obj.Convnet, imgs, featureLayer, ...
+                        'MiniBatchSize', 32);
+                    p = predict(obj.AlexNetSvm, features);
+                    predictedLabels(ii) = p;
                 end
-                
-                featureLayer = 'fc7';
-                features = activations(obj.Convnet, imgs, featureLayer, ...
-                    'MiniBatchSize', 32);
-                p = predict(obj.AlexNetSvm, features);
-                predictedLabels(ii) = p;
             end
         end
         

@@ -1,0 +1,75 @@
+% %% Load Data
+% % You can comment out this entire section  after the first execution
+% 
+path = 'M:\home\simon\uni\cvhci\data\unseen'; % change path
+imds = imageDatastore(path, 'LabelSource', 'foldernames', 'includeSubfolders', false);
+% 
+% % Loads the variable convnet
+%load('alex-net.mat', 'convnet'); % change path
+% 
+% % just sent you this on slack
+% % it contains the variables coinDetector and colorClassifier
+% % |coinDetector| is used to segment the image
+% % |colorClassifier| returns a color response (copper, brass, 1-2-euro) 
+% % for each found region
+%load('classifiers-compact.mat'); 
+% 
+% % Sets AlexNet in coinDetector
+% coinDetector.Classifier.Convnet = convnet;
+% 
+% %sloth = io.readsloth('M:\home\simon\uni\cvhci\data\all\labels.json');
+% %root_dir = 'M:\home\simon\uni\cvhci\data\all\';
+results_dir = 'M:\home\simon\uni\cvhci\data\results_coin_detection_unseen';
+mkdir(results_dir);
+
+%% Test for 10 random images
+for i=1:numel(imds.Files)        
+%for i=1:numel(sloth.annotations)        
+    %% Preprocessing
+    %I = imread(fullfile(root_dir, sloth.annotations{i}.filename));
+    I = imds.readimage(i);
+    
+    %Read labeled data
+    ground_truth_coinsvalue = NaN;
+    if exist('sloth', 'var')
+        annotations = [sloth.annotations{i}.annotations{:}];
+        labels = {annotations.class};    
+        ground_truth_coinsvalue = sumCoinValue(labels) / 100;
+    end
+        
+    %% Segmentation
+    [centers, radii, bboxes] = findcoins(coinDetector, I);
+    
+    %% Classify found coins by their color features (brass, copper, 1-2-euro)
+    predictedLabels = predict(colorClassifier, I, bboxes);        
+    
+    %Resize Image for display
+    Iresized = io.scaleimage(I, 500, 'absolute');
+    f = size(Iresized,1) / size(I,1);
+    
+    %Annotate picture coin colors
+    out1 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)),'FontSize',14, 'LineWidth',3);
+    
+    %figure; imshow(imresize(out1, 0.2));  
+    
+    %% Classify actual coin values
+    predictedLabels = predict(allcoinsclassifier, I, bboxes);
+    detected_coinsvalue = sumCoinValue(predictedLabels) / 100;
+    
+    %Annotate images with coin types
+    out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'FontSize',14, 'LineWidth',3);    
+    out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
+    
+    h = figure;        
+    imshow(out2);
+    export_fig(h, fullfile(results_dir, sprintf('%d.png',i)), '-png', '-r300');
+    close(h);
+    
+    h = figure;  
+    imshow(out1);
+    export_fig(h, fullfile(results_dir, sprintf('%d-color.png',i)), '-png', '-r300');
+    close(h);
+    
+    
+    %tts(sprintf('%.2f Euro', detected_coinsvalue), 'Microsoft Hedda Desktop - German', 3, 16000);    
+end
