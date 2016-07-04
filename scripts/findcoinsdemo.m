@@ -23,7 +23,7 @@ results_dir = 'M:\home\simon\uni\cvhci\data\results_coin_detection_unseen';
 mkdir(results_dir);
 
 %% Test for 10 random images
-for i=1:numel(imds.Files)        
+for i=1:numel(imds.Files) 
 %for i=1:numel(sloth.annotations)        
     %% Preprocessing
     %I = imread(fullfile(root_dir, sloth.annotations{i}.filename));
@@ -52,17 +52,28 @@ for i=1:numel(imds.Files)
     
     %figure; imshow(imresize(out1, 0.2));  
     
-    %% Classify actual coin values
+    %% Classify actual coin values with 2 different approaches
     predictedLabels = predict(allcoinsclassifier, I, bboxes);
+    predictedLabelsBySize = classifyBySize(bboxes, predictedLabels);
+    
     detected_coinsvalue = sumCoinValue(predictedLabels) / 100;
+    detected_coinsvalue_bysize = sumCoinValue(predictedLabelsBySize) / 100;
     
     %Annotate images with coin types
     out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'FontSize',14, 'LineWidth',3);    
     out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
     
+    out3 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabelsBySize)), 'FontSize',14, 'LineWidth',3);    
+    out3 = insertText(out3, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue_bysize), 'FontSize', 14);
+    
     h = figure;        
     imshow(out2);
     export_fig(h, fullfile(results_dir, sprintf('%d.png',i)), '-png', '-r300');
+    close(h);
+    
+    h = figure;        
+    imshow(out3);
+    export_fig(h, fullfile(results_dir, sprintf('%d-bysize.png',i)), '-png', '-r300');
     close(h);
     
     h = figure;  
