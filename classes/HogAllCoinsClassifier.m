@@ -14,9 +14,15 @@ classdef HogAllCoinsClassifier < handle
         function predictedLabels = predict(obj, image, bboxes)            
             predictedLabels = repmat(obj.Classifier.ClassificationKNN.ClassNames(1), size(bboxes,1), 1);
             for i=1:size(bboxes,1)
-                coin = imresize(imcrop(image, bboxes(i,:)), [80 80]);
-                hogFeatures = extractHOGFeatures(coin, 'CellSize', [8 8]);
-                predictedLabels(i) = obj.Classifier.predictFcn(table(hogFeatures));
+                img = imcrop(image, bboxes(i,:));
+                
+                imgresized = imresize(img, [80 80]);
+                hogFeatures = extractHOGFeatures(imgresized, 'CellSize', [8 8]);
+                
+                colorFeatures = cls.extractColorFeatures(img, 'lab');
+                features = [hogFeatures colorFeatures];
+                
+                predictedLabels(i) = obj.Classifier.predictFcn(table(features));
             end
         end
     end
