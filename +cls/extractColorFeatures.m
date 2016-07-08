@@ -5,6 +5,9 @@ function [ features  ] = extractColorFeatures( I, colorspace)
 if isa(I,'matlab.io.datastore.ImageDatastore')
     features = zeros(numel(I.Files), 6);
     for i=1:numel(I.Files)
+        if mod(i,100) == 0
+            fprintf('Sample %d/%d\n', i, numel(I.Files));
+        end
         features(i,:) = doExtract(I.readimage(i),colorspace);
     end
 else

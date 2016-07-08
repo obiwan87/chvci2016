@@ -9,6 +9,9 @@ if isa(data, 'matlab.io.datastore.ImageDatastore')
     features = zeros(numel(data.Files)*numel(rotations), size(f,2));
     
     for i=1:numel(data.Files)
+        if mod(i, 100) == 0
+            fprintf('Sample %i/%i \n', i, numel(data.Files));
+        end
         I = data.readimage(i);
         
         if numel(rotations) > 1
