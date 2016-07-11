@@ -70,7 +70,7 @@ for i=1:numel(sloth.annotations)
     misses = numel(missedCoins);
     out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'Color', colors, 'FontSize',14, 'LineWidth',3);
     for m=1:numel(missedCoins)
-        out2 = insertObjectAnnotation(Iresized, 'rectangle', [missedCoins(m).x missedCoins(m).y missedCoins(m).width missedCoins(m).height], missedCoins(m).class, 'Color', 'white');
+        out2 = insertObjectAnnotation(Iresized, 'rectangle', [missedCoins(m).x missedCoins(m).y missedCoins(m).width missedCoins(m).height]*f, missedCoins(m).class, 'Color', 'white');
     end
     
     out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
