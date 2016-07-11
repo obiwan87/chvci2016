@@ -41,7 +41,7 @@ for i=1:numel(sloth.annotations)
     %% Segmentation
     [centers, radii, bboxes] = findcoins(coinDetector, I);
     if exist('sloth', 'var')
-        trueLabels = eval.getLabelsForCoins(annotations, bboxes);
+        [trueLabels, missedCoins] = eval.getLabelsForCoins(annotations, bboxes);
     end
     
     %% Classify found coins by their color features (brass, copper, 1-2-euro)
@@ -67,8 +67,12 @@ for i=1:numel(sloth.annotations)
     %Annotate images with coin types
     
     colors = eval.getAnnotationColors(predictedLabels, trueLabels);
-    misses = numel(annotations) - (sum(strcmp('green', colors)) + sum(strcmp('red', colors)));
-    out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'Color', colors, 'FontSize',14, 'LineWidth',3);    
+    misses = numel(missedCoins);
+    out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'Color', colors, 'FontSize',14, 'LineWidth',3);
+    for m=1:numel(missedCoins)
+        out2 = insertObjectAnnotation(Iresized, 'rectangle', [missedCoins(m).x missedCoins(m).y missedCoins(m).width missedCoins(m).height], missedCoins(m).class, 'Color', 'white');
+    end
+    
     out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
     out2 = insertText(out2, [0 25], sprintf('%i coins missed€', misses), 'FontSize', 14);
     
