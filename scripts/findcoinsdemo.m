@@ -1,8 +1,8 @@
 % %% Load Data
 % % You can comment out this entire section  after the first execution
 % 
-path = 'M:\home\simon\uni\cvhci\data\unseen'; % change path
-imds = imageDatastore(path, 'LabelSource', 'foldernames', 'includeSubfolders', false);
+path = '~/Desktop/coins/data'; % change path
+imds = imageDatastore(path, 'LabelSource', 'foldernames', 'includeSubfolders', true);
 % 
 % % Loads the variable convnet
 %load('alex-net.mat', 'convnet'); % change path
@@ -17,20 +17,21 @@ imds = imageDatastore(path, 'LabelSource', 'foldernames', 'includeSubfolders', f
 % % Sets AlexNet in coinDetector
 % coinDetector.Classifier.Convnet = convnet;
 % 
-% %sloth = io.readsloth('M:\home\simon\uni\cvhci\data\all\labels.json');
+% %sloth = io.readsloth('~/Desktop/coins/data/labels-fb-total.json');
 % %root_dir = 'M:\home\simon\uni\cvhci\data\all\';
-results_dir = 'M:\home\simon\uni\cvhci\data\results_coin_detection_unseen';
-mkdir(results_dir);
+%results_dir = 'M:\home\simon\uni\cvhci\data\results_coin_detection_unseen';
+%mkdir(results_dir);
 
 %% Test for 10 random images
-for i=1:numel(imds.Files) 
-%for i=1:numel(sloth.annotations)        
+%for i=1:numel(imds.Files) 
+for i=1:numel(sloth.annotations)        
     %% Preprocessing
-    %I = imread(fullfile(root_dir, sloth.annotations{i}.filename));
-    I = imds.readimage(i);
+    I = imread(fullfile(root_dir, sloth.annotations{i}.filename));
+    %I = imds.readimage(i);
     
     %Read labeled data
     ground_truth_coinsvalue = NaN;
+    trueLabels = NaN;
     if exist('sloth', 'var')
         annotations = [sloth.annotations{i}.annotations{:}];
         labels = {annotations.class};    
@@ -39,8 +40,12 @@ for i=1:numel(imds.Files)
         
     %% Segmentation
     [centers, radii, bboxes] = findcoins(coinDetector, I);
+    if exist('sloth', 'var')
+        trueLabels = eval.getLabelsForCoins(annotations, bboxes);
+    end
     
     %% Classify found coins by their color features (brass, copper, 1-2-euro)
+    disp('Classifying...');
     predictedLabels = predict(colorClassifier, I, bboxes);        
     
     %Resize Image for display
@@ -54,27 +59,31 @@ for i=1:numel(imds.Files)
     
     %% Classify actual coin values with 2 different approaches
     predictedLabels = predict(allcoinsclassifier, I, bboxes);
-    predictedLabelsBySize = classifyBySize(bboxes, predictedLabels);
+    %predictedLabelsBySize = classifyBySize(bboxes, predictedLabels);
     
     detected_coinsvalue = sumCoinValue(predictedLabels) / 100;
-    detected_coinsvalue_bysize = sumCoinValue(predictedLabelsBySize) / 100;
+    %detected_coinsvalue_bysize = sumCoinValue(predictedLabelsBySize) / 100;
     
     %Annotate images with coin types
-    out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'FontSize',14, 'LineWidth',3);    
-    out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
     
-    out3 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabelsBySize)), 'FontSize',14, 'LineWidth',3);    
-    out3 = insertText(out3, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue_bysize), 'FontSize', 14);
+    colors = eval.getAnnotationColors(predictedLabels, trueLabels);
+    misses = numel(annotations) - (sum(strcmp('green', colors)) + sum(strcmp('red', colors)));
+    out2 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabels)), 'Color', colors, 'FontSize',14, 'LineWidth',3);    
+    out2 = insertText(out2, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue), 'FontSize', 14);
+    out2 = insertText(out2, [0 25], sprintf('%i coins missed€', misses), 'FontSize', 14);
+    
+    %out3 = insertObjectAnnotation(Iresized, 'circle', [centers radii]*f, cellstr(char(predictedLabelsBySize)), 'FontSize',14, 'LineWidth',3);    
+    %out3 = insertText(out3, [0 0], sprintf('GT: %.2f € / D: %.2f €', ground_truth_coinsvalue, detected_coinsvalue_bysize), 'FontSize', 14);
     
     h = figure;        
     imshow(out2);
     export_fig(h, fullfile(results_dir, sprintf('%d.png',i)), '-png', '-r300');
-    close(h);
+    %close(h);
     
-    h = figure;        
-    imshow(out3);
-    export_fig(h, fullfile(results_dir, sprintf('%d-bysize.png',i)), '-png', '-r300');
-    close(h);
+    %h = figure;        
+    %imshow(out3);
+    %export_fig(h, fullfile(results_dir, sprintf('%d-bysize.png',i)), '-png', '-r300');
+    %close(h);
     
     h = figure;  
     imshow(out1);

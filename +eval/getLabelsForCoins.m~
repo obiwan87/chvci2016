@@ -1,0 +1,23 @@
+function [ output_args ] = getLabelsForCoins( annotations, bboxes )
+%GETLABELSFORCOINS Compare segmentation results to labeled truth and assign
+%labels to found coins
+%   Detailed explanation goes here
+overlaps = zeros(size(bboxes, 1), numel(annotations));
+for i=1:size(bboxes, 1)
+    for j=1:numel(annotations)
+        overlaps(i,j) = seg.determineOverlap2(bboxes(i,1), bboxes(i,2), ...
+            bboxes(i,3), bboxes(i,4), annotations(j).x, annotations(j).y, ...
+            annotations(j).width, annotations(j).height);
+    end
+end
+
+[M, I] = max(overlaps);
+labels = cell(zeros(size(bboxes, 1)));
+for j=1:size(M)
+    if M(j) > 0.5
+        labels(I(j)) = annotations(j).class;
+        
+    
+
+end
+

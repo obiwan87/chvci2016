@@ -1,0 +1,7 @@
+function [ colors ] = getAnnotationColors( predictedLabels, trueLabels )
+%GETANNOTATIONCOLORS Generate colors to display coins in output
+%   Detailed explanation goes here
+colors
+
+end
+
