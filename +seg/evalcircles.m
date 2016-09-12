@@ -1,4 +1,4 @@
-function [ stats, detection_results ] = evalcircles( sloth, parameters, classifier, threshold, varargin)
+function [ stats, detection_results ] = evalcircles( sloth, parameters, coinDetector, threshold, varargin)
 %TWOSTEPSEGMENTATION Summary of this function goes here
 %   Detailed explanation goes here
 %EVALCIRCLES Applies segmentation and evaluates performance
@@ -43,7 +43,7 @@ for i = 1:numel(sloth.annotations)
     tic
     disp('Find Coins...');
     if strcmp(opts.Method, 'TwoStep')
-        [centers, radii] = seg.findcoins(image, classifier, parameters, threshold);
+        [centers, radii] = findcoins(coinDetector, image);
     else
         [centers, radii] = seg.findcircles(image, parameters);
     end
@@ -77,9 +77,9 @@ for i = 1:numel(sloth.annotations)
                     bestMatch = k;
                 end
             end
-            regions.annotations{j}.class = 'no-coin';
-            assumed = assumed + 1;
-            if maxOverlap > requiredOverlap            
+            regions.annotations{j}.class = 'no-coin';           
+            if maxOverlap > requiredOverlap       
+                assumed = assumed + 1;
                 regions.annotations{j}.class = 'coin';
                 if ~matches.contains(bestMatch) && bestMatch > 0
                     foundcoins(bestMatch) = 1;

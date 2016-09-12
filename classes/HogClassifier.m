@@ -8,6 +8,7 @@ classdef HogClassifier < CoinClassifier
         Convnet = [];
         AlexNetSvm = [];
         UseAlexNet = true;
+        UseHog = false;
     end
     
     methods(Access=public)
@@ -20,21 +21,29 @@ classdef HogClassifier < CoinClassifier
         end
         
         function predictedLabels = predict(obj, images)
-            %hog
-            hog = extractHOGFeatures(images(:,:,:,1));
-            features = zeros(size(images,4), size(hog,2));
-            for i=1:size(images,4)
-                hog = extractHOGFeatures(images(:,:,:,i));
-                features(i,:) = hog;
+            if obj.UseHog
+                nocoinlabel = obj.Classifier.ClassNames(1);
+                %hog
+                hog = extractHOGFeatures(images(:,:,:,1));
+                features = zeros(size(images,4), size(hog,2));
+                for i=1:size(images,4)
+                    hog = extractHOGFeatures(images(:,:,:,i));
+                    features(i,:) = hog;
+                end
+                
+                [predictedLabels, ~, pbscores] = predict(obj.Classifier, features);
             end
             
-            [predictedLabels, ~, pbscores] = predict(obj.Classifier, features);
-            
             if obj.UseAlexNet
-                %Alex net
-                coinscores = abs(pbscores(obj.Classifier.ClassNames(1) == predictedLabels));
-                idx = find(obj.Classifier.ClassNames(1) == predictedLabels);
-                ii = idx(coinscores<1.5);
+                %Alex net                
+                if exist('pbscores', 'var')
+                    coinscores = abs(pbscores(obj.Classifier.ClassNames(1) == predictedLabels));                    
+                    idx = find(nocoinlabel == predictedLabels);
+                    ii = idx(coinscores<1.5);
+                else
+                    ii = 1:size(images,4);
+                end
+                
                 alexnetimages = images(:,:,:,ii);
                 if numel(alexnetimages) > 0
                     imgs = zeros(227,227,3,numel(ii));

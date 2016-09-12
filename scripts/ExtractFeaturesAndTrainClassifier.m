@@ -1,9 +1,9 @@
 %Load Sloth: IMPORTANT! Make sure you are using _front / _back labels !!!!
 
-root_dir = 'M:\home\simon\uni\cvhci\data\all\labels.json';
-sloth = io.readsloth(root_dir);
+root_dir = 'M:\home\simon\uni\cvhci\data\';
+sloth = io.readsloth(fullfile(root_dir, 'labels-fb-total.json'));
 
-regions_dir = 'M:\home\simon\uni\cvhci\data\all-regions-front-back\';
+regions_dir = 'M:\home\simon\uni\cvhci\data\all-regions-front-back';
 sloth_regions = io.extractregions(sloth, regions_dir, 'FileStructure', 'ClassFolders');
 
 imds = imageDatastore(regions_dir, 'LabelSource', 'foldernames', 'includeSubfolders', true);
